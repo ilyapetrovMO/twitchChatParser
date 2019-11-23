@@ -54,7 +54,7 @@ console.log('connected to twitch');
 
 client.on('message', (channel, tags, message, self) => {
     // if(self) return;
-    let regex = /.....-.....-.....-...../g;
+    let regex = /[A-z0-9]{5}-[A-z0-9]{5}-[A-z0-9]{5}-[A-z0-9]{5}/g;
     let found = message.toLowerCase().match(regex);
 	if(!_.isEmpty(found)) {
         
@@ -62,3 +62,7 @@ client.on('message', (channel, tags, message, self) => {
         console.log('///////////////////////');
 	}
 });
+
+//@TODO: ввод с сосноли своего айди и юзернейма
+//разделить на два файла
+//раз в 30 минут получать новый список стримов
