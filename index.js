@@ -1,50 +1,50 @@
 const tmi = require('tmi.js');
-var https = require('https');
-var _ = require('lodash');
+const https = require('https');
+const _ = require('lodash');
+const { exec } = require('child_process');
+let { channels } = require('./config.json');
+const { debug, clientId } = require('./config.json');
 
-var gameId = 491931;
-var channels = [];
+const notifyMethod = process.platform === 'win32' ? 'msg' : 'notify-send';
 
-var options = {
-    host: 'api.twitch.tv',
-    path: '/helix/streams?game_id=491931',
-    headers: {
-      'Client-Id': 'u8fkxgiy0vgvcutn63juxdxmq95eld',
-    },
-    method: 'GET',
-}
+const options = {
+  host: 'api.twitch.tv',
+  path: '/helix/streams?game_id=491931',
+  headers: {
+    'Client-Id': clientId,
+  },
+  method: 'GET',
+};
 
-let req = https.request(options, (resp) => {
-  let data = '';
-
-  // A chunk of data has been recieved.
-  resp.on('data', (chunk) => {
-    data += chunk;
-  });
-
-  // The whole response has been received. Print out the result.
-  resp.on('end', () => {
-    let dataParsed = JSON.parse(data)
-    channels = _.map(dataParsed.data, channel => {
-        channels.push('#'+ channel.user_name);
+const getStreams = () => {
+  const req = https.request(options, (resp) => {
+    let data = '';
+    resp.on('data', (chunk) => {
+      data += chunk;
     });
-    console.log(channels.length + ' channels to be scanned')
+    resp.on('end', () => {
+      const dataParsed = JSON.parse(data);
+      channels = _.map(dataParsed.data, (channel) => {
+        channels.push(`#${channel.user_name}`);
+      });
+      console.log(`${channels.length} channels to be scanned`);
+    });
+  }).on('error', (err) => {
+    console.log(`Error: ${err.message}`);
   });
+  req.end();
+};
+getStreams();
+const timer = setInterval(() => { getStreams(); }, 1.8e+6);
+clearInterval(timer);
 
-}).on("error", (err) => {
-  console.log("Error: " + err.message);
-});
-
-req.end();
-
-// Define configuration options
 const opts = {
-  options: { debug: false },
-	connection: {
-		reconnect: true,
-		secure: true
-	},
-	channels,
+  options: { debug },
+  connection: {
+    reconnect: true,
+    secure: true,
+  },
+  channels,
 };
 
 console.log('starting tmi');
@@ -52,17 +52,13 @@ const client = new tmi.Client(opts);
 client.connect();
 console.log('connected to twitch');
 
-client.on('message', (channel, tags, message, self) => {
-    // if(self) return;
-    let regex = /[A-z0-9]{5}-[A-z0-9]{5}-[A-z0-9]{5}-[A-z0-9]{5}/g;
-    let found = message.toLowerCase().match(regex);
-	if(!_.isEmpty(found)) {
-        
-        console.log(found);
-        console.log('///////////////////////');
-	}
-});
+exec(`${notifyMethod} TwitchScaper "notifications enabled"`);
+client.on('message', (channel, tags, message) => {
+  const regex = /[A-z0-9]{5}-[A-z0-9]{5}-[A-z0-9]{5}-[A-z0-9]{5}/g;
+  const found = message.toLowerCase().match(regex);
 
-//@TODO: ввод с сосноли своего айди и юзернейма
-//разделить на два файла
-//раз в 30 минут получать новый список стримов
+  if (!_.isEmpty(found)) {
+    console.log(found);
+    exec(`${notifyMethod} TwitchScaper "${found}"`);
+  }
+});
