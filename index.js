@@ -35,8 +35,7 @@ const getStreams = () => {
   req.end();
 };
 getStreams();
-const timer = setInterval(() => { getStreams(); }, 1.8e+6);
-clearInterval(timer);
+setInterval(() => { getStreams(); }, 1800000);
 
 const opts = {
   options: { debug },
